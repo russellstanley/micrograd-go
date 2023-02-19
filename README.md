@@ -1,0 +1,1 @@
+Implementation of micrograd in Go. Based of the pyhton implementation found [here](https://github.com/karpathy/micrograd).
