@@ -1,8 +1,13 @@
 package main
 
-import "fmt"
+import (
+	"math"
+)
+
+var counter int
 
 type Value struct {
+	id   int
 	data float64
 	grad float64
 
@@ -10,72 +15,104 @@ type Value struct {
 	_backward func()
 }
 
-func Make(data float64, prev []*Value) *Value {
+func New(data float64, prev []*Value) *Value {
 	out := Value{
 		data:      data,
+		grad:      0,
+		id:        counter,
 		prev:      prev,
-		_backward: func() { return }}
-
+		_backward: func() {},
+	}
+	counter++
 	return &out
 }
 
-func MakeConstant(data float64) *Value {
+func NewArray(data []float64) []*Value {
+	array := make([]*Value, len(data))
+
+	for i, n := range data {
+		out := Value{
+			data:      n,
+			grad:      0,
+			id:        counter,
+			prev:      make([]*Value, 0),
+			_backward: func() {},
+		}
+		array[i] = &out
+		counter++
+	}
+	return array
+}
+
+func NewConstant(data float64) *Value {
 	out := Value{
 		data:      data,
+		grad:      0,
+		id:        counter,
 		prev:      make([]*Value, 0),
-		_backward: func() { return }}
-
+		_backward: func() {},
+	}
+	counter++
 	return &out
 }
 
 func (self *Value) Add(other *Value) *Value {
 	prev := []*Value{self, other}
-	out := Make(self.data+other.data, prev)
+	out := New(self.data+other.data, prev)
 
 	out._backward = func() {
 		// f(a) = a + b, f'(a) = 1
 		self.grad += out.grad
 		other.grad += out.grad
 	}
-
 	return out
 }
 
 func (self *Value) Mul(other *Value) *Value {
 	prev := []*Value{self, other}
-	out := Make(self.data*other.data, prev)
+	out := New(self.data*other.data, prev)
 
 	out._backward = func() {
 		// f(a) = ab, f'(a) = b
 		self.grad += other.data * out.grad
 		other.grad += self.data * out.grad
 	}
-
 	return out
 }
 
-func f(a, b, c float64) float64 {
-	return (a * b) * c
+func (self *Value) Pow(other float64) *Value {
+	prev := []*Value{self}
+	out := New(math.Pow(self.data, other), prev)
+
+	out._backward = func() {
+		// f(a) = a**c, f'(a) = c*a**(c-1)
+		self.grad += (other * math.Pow(self.data, other-1)) * out.grad
+	}
+	return out
 }
 
-func main() {
-	// (a * b) * c
-	h := 0.00001
-	fmt.Println((f(100+h, -200, 300) - f(100, -200, 300)) / h)
+func (self *Value) Tanh() *Value {
+	prev := []*Value{self}
+	out := New(math.Tanh(self.data), prev)
 
-	a := MakeConstant(100)
-	b := MakeConstant(-200)
-	c := MakeConstant(300)
-	d := a.Mul(b)
-	e := d.Mul(c)
-	e.grad = 1.0
-	c._backward()
-	e._backward()
-	d._backward()
+	out._backward = func() {
+		// f(a) = tanh(a), f'(a) = 1-(tanh(a))**2
+		self.grad += (1 - math.Pow(math.Tanh(self.data), 2)) * out.grad
+	}
+	return out
+}
 
-	fmt.Println(d.prev[0])
-	fmt.Println(d.prev[1])
-	fmt.Println(e.prev[0])
-	fmt.Println(e.prev[1])
-	fmt.Println(e)
+func (self *Value) Div(other *Value) *Value {
+	return self.Mul(other.Pow(-1))
+}
+
+func (root *Value) Backward() {
+	root.grad = 1.0
+	topo := NewTopologicalSort()
+	topo.Sort(root)
+	list := topo.sorted
+
+	for i := range list {
+		list[len(list)-1-i]._backward()
+	}
 }
