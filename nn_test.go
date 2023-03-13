@@ -22,24 +22,31 @@ func train(mlp *MLP, xtrain [][]*Value, ytrain []*Value, generation int, t *test
 	lp := NewConstant(16.0)
 
 	for i := 0; i < generation; i++ {
-		ypred, err = mlp.forward(xtrain, ytrain)
-		if err != nil {
-			return nil, err
+		// Forward pass.
+		ypred = make([][]*Value, len(xtrain))
+
+		for i, x := range xtrain {
+			ypred[i], err = mlp.fire(x)
+			if err != nil {
+				return nil, err
+			}
 		}
 
+		// Compute the loss.
 		l := loss(ytrain, ypred)
 		if l.data > lp.data {
 			t.Errorf("loss increased, previous %f, current %f", lp.data, l.data)
 		}
 		t.Log(l.data)
 
+		// Backpropagation.
 		l.Backward()
 		for _, p := range param {
 			p.data += -0.05 * p.grad
 		}
 
 		lp = l
-		mlp.zeroGrad()
+		mlp.zeroGrad(param)
 	}
 	return ypred, nil
 }

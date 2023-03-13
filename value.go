@@ -6,6 +6,10 @@ import (
 
 var counter int
 
+// Value defines an individual value in micrograd-go. This holds a specified floating point number aswell as
+// the previous values which were used to calculate the current value. This struct also holds the gradient of
+// the value which is determined via the operations used to compute it. This is useful to determine the impact
+// that changing this value will have and scales to support a large number of operations.
 type Value struct {
 	id   int
 	data float64
