@@ -1,5 +1,6 @@
 package main
 
+// TODO: Documentation
 type TopologicalSort struct {
 	sorted  []*Value
 	visited []*Value

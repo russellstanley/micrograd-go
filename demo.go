@@ -105,3 +105,5 @@ func loadIris(filePath string) ([][]*Value, []*Value, error) {
 	}
 	return x_train, y_train, nil
 }
+
+//TODO: Add some visualization.

@@ -19,6 +19,7 @@ type Value struct {
 	_backward func()
 }
 
+// TODO: Documentation
 func New(data float64, prev []*Value) *Value {
 	out := Value{
 		data:      data,
