@@ -1,21 +1,20 @@
 package main
 
 import (
-	"encoding/csv"
 	"fmt"
-	"os"
-	"strconv"
 )
 
 func main() {
-	mlp := NewMLP(4, []int{16, 6, 3})
+	mlp := NewMLP(2, []int{8, 8, 4, 1})
 
-	x_train, y_train, err := loadIris("iris.csv")
+	x_train, y_train, err := loadData("data.csv", 2)
 	if err != nil {
 		fmt.Print(err.Error())
 		return
 	}
+
 	training(mlp, x_train, y_train, 20)
+	visualization(mlp, x_train, y_train)
 }
 
 func training(mlp *MLP, xtrain [][]*Value, ytrain []*Value, generation int) ([][]*Value, error) {
@@ -30,7 +29,7 @@ func training(mlp *MLP, xtrain [][]*Value, ytrain []*Value, generation int) ([][
 		for i, x := range xtrain {
 			ypred[i], err = mlp.fire(x)
 			if err != nil {
-				return nil, err
+				panic(err)
 			}
 		}
 
@@ -41,9 +40,10 @@ func training(mlp *MLP, xtrain [][]*Value, ytrain []*Value, generation int) ([][
 		// Backpropagation.
 		l.Backward()
 		for _, p := range param {
-			p.data += -0.05 * p.grad
+			p.data += -0.1 * p.grad
 		}
 
+		fmt.Printf("%d/%d\n", accuracy(mlp, xtrain, ytrain), len(xtrain))
 		mlp.zeroGrad(param)
 	}
 	return ypred, nil
@@ -62,48 +62,31 @@ func meanSquared(yt []*Value, ypred [][]*Value) *Value {
 	return loss
 }
 
-func loadIris(filePath string) ([][]*Value, []*Value, error) {
-	file, err := os.Open(filePath)
+func predict(mlp *MLP, x []*Value) float64 {
+	pred := 0.0
+
+	out, err := mlp.fire(x)
 	if err != nil {
-		return nil, nil, err
-	}
-	defer file.Close()
-
-	csvReader := csv.NewReader(file)
-	data, err := csvReader.ReadAll()
-	if err != nil {
-		return nil, nil, err
+		panic(err)
 	}
 
-	// Skip header.
-	data = data[1:]
-
-	x_train := make([][]*Value, len(data))
-	y_train := make([]*Value, len(data))
-
-	for i, entry := range data {
-		// Load the labels.
-		if entry[4] == "Setosa" {
-			y_train[i] = NewConstant(0.0)
-		} else if entry[4] == "Versicolor" {
-			y_train[i] = NewConstant(1.0)
-		} else if entry[4] == "Virginica" {
-			y_train[i] = NewConstant(2.0)
-		}
-
-		// Load the input data.
-		x := make([]float64, 4)
-
-		for j := 0; j < 4; j++ {
-			value, err := strconv.ParseFloat(entry[j], 64)
-			if err != nil {
-				return nil, nil, err
-			}
-			x[j] = value
-		}
-		x_train[i] = NewArray(x)
+	if out[0].data > 0.0 {
+		pred = 1.0
+	} else {
+		pred = -1.0
 	}
-	return x_train, y_train, nil
+	return pred
 }
 
-//TODO: Add some visualization.
+func accuracy(mlp *MLP, xtrain [][]*Value, ytrain []*Value) int {
+	correct := 0
+
+	for i, x := range xtrain {
+		pred := predict(mlp, x)
+
+		if pred == ytrain[i].data {
+			correct++
+		}
+	}
+	return correct
+}
