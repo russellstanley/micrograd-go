@@ -9,8 +9,7 @@ func main() {
 
 	x_train, y_train, err := loadData("data.csv", 2)
 	if err != nil {
-		fmt.Print(err.Error())
-		return
+		panic(err)
 	}
 
 	training(mlp, x_train, y_train, 20)
@@ -54,6 +53,7 @@ func meanSquared(yt []*Value, ypred [][]*Value) *Value {
 	n := len(yt)
 
 	for i := range yt {
+		// l = sum(yt_i - ypred_i)^2
 		loss = loss.Add(yt[i].Add(
 			ypred[i][0].Mul(NewConstant(-1.0))).Pow(2))
 	}
